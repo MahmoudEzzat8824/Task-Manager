@@ -27,14 +27,14 @@ jobs:
       - name: Test Backend
         working-directory: ./backend
         run: |
-          npm ci
+          npm install
           npm run lint || echo " No lint script"
           npm test || echo " No tests found"
       
       - name: Test Frontend
         working-directory: ./frontend
         run: |
-          npm ci
+          npm install
           npm run lint || echo " No lint script"
           npm test -- --watchAll=false || echo " No tests found"
           npm run build
