@@ -1,0 +1,170 @@
+#Backend Deployment (AKS with Standard_DC2as_v5)
+# Cost: ~$100-150/month, $200 credit lasts 1.5-2 months
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: task-manager-backend
+  labels:
+    app: task-manager-backend
+spec:
+  replicas: 1  # Single replica to minimize costs
+  selector:
+    matchLabels:
+      app: task-manager-backend
+  template:
+    metadata:
+      labels:
+        app: task-manager-backend
+    spec:
+      containers:
+      - name: task-manager-backend
+        image: ACR_NAME.azurecr.io/nodejs-fullstack/backend:latest
+        resources:
+          requests:
+            memory: "128Mi"    
+            cpu: "100m"       
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        env:
+        - name: MONGO_URI
+          valueFrom:
+            secretKeyRef:
+              name: task-manager-mongo-secret
+              key: MONGO_URI
+        - name: PORT
+          value: "5000"
+        - name: NODE_ENV
+          value: "production"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: task-manager-mongo-secret
+              key: JWT_SECRET
+        ports:
+        - containerPort: 5000
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 5000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 5000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+#Frontend Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: task-manager-frontend
+  labels:
+    app: task-manager-frontend
+spec:
+  replicas: 1  # Single replica to minimize costs
+  selector:
+    matchLabels:
+      app: task-manager-frontend
+  template:
+    metadata:
+      labels:
+        app: task-manager-frontend
+    spec:
+      containers:
+      - name: task-manager-frontend
+        image: ACR_NAME.azurecr.io/nodejs-fullstack/frontend:latest
+        resources:
+          requests:
+            memory: "128Mi"   
+            cpu: "100m"       
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        ports:
+        - containerPort: 80
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+#Prometheus Deployment (Optional - disabled by default to save costs)
+# Uncomment only if you have resources available
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: prometheus
+#   labels:
+#     app: prometheus
+# spec:
+#   replicas: 1
+#   selector:
+#     matchLabels:
+#       app: prometheus
+#   template:
+#     metadata:
+#       labels:
+#         app: prometheus
+#     spec:
+#       containers:
+#       - name: prometheus
+#         image: prom/prometheus:latest
+#         resources:
+#           requests:
+#             memory: "128Mi"
+#             cpu: "100m"
+#           limits:
+#             memory: "256Mi"
+#             cpu: "200m"
+#         args:
+#           - '--config.file=/etc/prometheus/prometheus.yml'
+#           - '--storage.tsdb.path=/prometheus'
+#         ports:
+#         - containerPort: 9090
+# ---
+#Grafana Deployment (Optional - disabled by default to save costs)
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: grafana
+#   labels:
+#     app: grafana
+# spec:
+#   replicas: 1
+#   selector:
+#     matchLabels:
+#       app: grafana
+#   template:
+#     metadata:
+#       labels:
+#         app: grafana
+#     spec:
+#       containers:
+#       - name: grafana
+#         image: grafana/grafana:latest
+#         resources:
+#           requests:
+#             memory: "128Mi"
+#             cpu: "100m"
+#           limits:
+#             memory: "256Mi"
+#             cpu: "200m"
+#         env:
+#         - name: GF_SECURITY_ADMIN_USER
+#           value: "admin"
+#         - name: GF_SECURITY_ADMIN_PASSWORD
+#           value: "admin"
+#         - name: GF_USERS_ALLOW_SIGN_UP
+#           value: "false"
+#         ports:
+#         - containerPort: 3000

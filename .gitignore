@@ -12,6 +12,11 @@ pnpm-debug.log
 secrets.txt
 credentials.txt
 
+# Kubernetes secrets
+k8s/secret-aks.yaml
+k8s/secret.yaml
+k8s/*-secret.yaml
+
 # Logs
 logs/
 *.log
