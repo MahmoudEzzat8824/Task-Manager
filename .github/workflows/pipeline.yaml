@@ -97,15 +97,24 @@ jobs:
       
       - name: Image build summary
         run: |
-          echo "### Docker Images Built (${{ steps.set-tag.outputs.ENV_TAG }})" >> $GITHUB_STEP_SUMMARY
+          echo "###  Docker Images Built (${{ steps.set-tag.outputs.ENV_TAG }})" >> $GITHUB_STEP_SUMMARY
           echo "- Backend: \`${{ secrets.DOCKER_HUB_USERNAME }}/nodejs-fullstack-backend:${{ steps.set-tag.outputs.ENV_TAG }}-${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- Frontend: \`${{ secrets.DOCKER_HUB_USERNAME }}/nodejs-fullstack-frontend:${{ steps.set-tag.outputs.ENV_TAG }}-${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.set-tag.outputs.ENV_TAG }}" == "production" ]; then
+            if [ -z "${{ secrets.AZURE_CREDENTIALS }}" ]; then
+              echo " **Auto-deployment skipped**: AZURE_CREDENTIALS secret not configured" >> $GITHUB_STEP_SUMMARY
+              echo "To enable auto-deployment, add AZURE_CREDENTIALS secret in repository settings" >> $GITHUB_STEP_SUMMARY
+            else
+              echo " **Auto-deployment**: Will deploy to AKS cluster" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
 
   deploy-production:
     name: Deploy to Production (AKS)
     runs-on: ubuntu-latest
     needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.AZURE_CREDENTIALS != ''
     environment: production
     
     steps:
