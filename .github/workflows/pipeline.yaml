@@ -126,7 +126,7 @@ jobs:
         run: |
           if [ -z "${{ secrets.AZURE_CREDENTIALS }}" ]; then
             echo "skip_deploy=true" >> $GITHUB_OUTPUT
-            echo "⚠️ AZURE_CREDENTIALS not configured - skipping deployment"
+            echo " AZURE_CREDENTIALS not configured - skipping deployment"
           else
             echo "skip_deploy=false" >> $GITHUB_OUTPUT
           fi
@@ -152,27 +152,27 @@ jobs:
           sed "s|ACR_NAME.azurecr.io/nodejs-fullstack|${{ secrets.DOCKER_HUB_USERNAME }}|g" k8s/deployment-aks.yaml > k8s/deployment-dockerhub.yaml
           sed -i "s|:latest|:production-${{ github.sha }}|g" k8s/deployment-dockerhub.yaml
       
-      - if: steps.check-creds.outputs.skip_deploy != 'true'
-        name: Apply Kubernetes manifests
+      - name: Apply Kubernetes manifests
+        if: steps.check-creds.outputs.skip_deploy != 'true'
         run: |
           kubectl apply -f k8s/configmap.yaml
           kubectl apply -f k8s/deployment-dockerhub.yaml
           kubectl apply -f k8s/service-aks.yaml
       
-      - if: steps.check-creds.outputs.skip_deploy != 'true'
-        name: Restart deployments
+      - name: Restart deployments
+        if: steps.check-creds.outputs.skip_deploy != 'true'
         run: |
           kubectl rollout restart deployment/task-manager-backend
           kubectl rollout restart deployment/task-manager-frontend
       
-      - if: steps.check-creds.outputs.skip_deploy != 'true'
-        name: Wait for rollout
+      - name: Wait for rollout
+        if: steps.check-creds.outputs.skip_deploy != 'true'
         run: |
           kubectl rollout status deployment/task-manager-backend --timeout=5m
           kubectl rollout status deployment/task-manager-frontend --timeout=5m
-      f: steps.check-creds.outputs.skip_deploy != 'true'
-        i
+      
       - name: Get deployment info
+        if: steps.check-creds.outputs.skip_deploy != 'true'
         id: deployment-info
         run: |
           echo "### Deployment Status" >> $GITHUB_STEP_SUMMARY
