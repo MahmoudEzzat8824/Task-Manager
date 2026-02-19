@@ -114,19 +114,31 @@ jobs:
     name: Deploy to Production (AKS)
     runs-on: ubuntu-latest
     needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.AZURE_CREDENTIALS != ''
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment: production
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
       
+      - name: Check Azure credentials
+        id: check-creds
+        run: |
+          if [ -z "${{ secrets.AZURE_CREDENTIALS }}" ]; then
+            echo "skip_deploy=true" >> $GITHUB_OUTPUT
+            echo "⚠️ AZURE_CREDENTIALS not configured - skipping deployment"
+          else
+            echo "skip_deploy=false" >> $GITHUB_OUTPUT
+          fi
+      
       - name: Azure Login
+        if: steps.check-creds.outputs.skip_deploy != 'true'
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
       
       - name: Get AKS credentials
+        if: steps.check-creds.outputs.skip_deploy != 'true'
         run: |
           az aks get-credentials \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
@@ -134,27 +146,32 @@ jobs:
             --overwrite-existing
       
       - name: Update deployment with Docker Hub images
+        if: steps.check-creds.outputs.skip_deploy != 'true'
         run: |
           # Create temporary deployment file with Docker Hub images
           sed "s|ACR_NAME.azurecr.io/nodejs-fullstack|${{ secrets.DOCKER_HUB_USERNAME }}|g" k8s/deployment-aks.yaml > k8s/deployment-dockerhub.yaml
           sed -i "s|:latest|:production-${{ github.sha }}|g" k8s/deployment-dockerhub.yaml
       
-      - name: Apply Kubernetes manifests
+      - if: steps.check-creds.outputs.skip_deploy != 'true'
+        name: Apply Kubernetes manifests
         run: |
           kubectl apply -f k8s/configmap.yaml
           kubectl apply -f k8s/deployment-dockerhub.yaml
           kubectl apply -f k8s/service-aks.yaml
       
-      - name: Restart deployments
+      - if: steps.check-creds.outputs.skip_deploy != 'true'
+        name: Restart deployments
         run: |
           kubectl rollout restart deployment/task-manager-backend
           kubectl rollout restart deployment/task-manager-frontend
       
-      - name: Wait for rollout
+      - if: steps.check-creds.outputs.skip_deploy != 'true'
+        name: Wait for rollout
         run: |
           kubectl rollout status deployment/task-manager-backend --timeout=5m
           kubectl rollout status deployment/task-manager-frontend --timeout=5m
-      
+      f: steps.check-creds.outputs.skip_deploy != 'true'
+        i
       - name: Get deployment info
         id: deployment-info
         run: |
