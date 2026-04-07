@@ -34,7 +34,7 @@ exports.getAllTasks = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching tasks',
-      error: error.message,
+      error: process.env.NODE_ENV === 'production' ? undefined : error.message,
     });
   }
 };
@@ -61,7 +61,7 @@ exports.getTask = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching task',
-      error: error.message,
+      error: process.env.NODE_ENV === 'production' ? undefined : error.message,
     });
   }
 };
@@ -141,7 +141,7 @@ exports.deleteTask = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error deleting task',
-      error: error.message,
+      error: process.env.NODE_ENV === 'production' ? undefined : error.message,
     });
   }
 };
@@ -183,7 +183,7 @@ exports.getTaskStats = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching statistics',
-      error: error.message,
+      error: process.env.NODE_ENV === 'production' ? undefined : error.message,
     });
   }
 };

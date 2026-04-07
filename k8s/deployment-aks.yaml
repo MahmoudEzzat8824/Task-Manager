@@ -16,9 +16,18 @@ spec:
       labels:
         app: task-manager-backend
     spec:
+      automountServiceAccountToken: false
       containers:
       - name: task-manager-backend
         image: ACR_NAME.azurecr.io/nodejs-fullstack/backend:latest
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+              - ALL
         resources:
           requests:
             memory: "128Mi"    
@@ -36,6 +45,8 @@ spec:
           value: "5000"
         - name: NODE_ENV
           value: "production"
+        - name: FRONTEND_URL
+          value: "http://your-frontend-domain-or-ip"
         - name: JWT_SECRET
           valueFrom:
             secretKeyRef:
@@ -73,6 +84,7 @@ spec:
       labels:
         app: task-manager-frontend
     spec:
+      automountServiceAccountToken: false
       containers:
       - name: task-manager-frontend
         image: ACR_NAME.azurecr.io/nodejs-fullstack/frontend:latest

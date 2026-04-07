@@ -1,8 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const taskManagerController = require('../controllers/taskManagerController');
+const auth = require('../middleware/auth');
 
-// Public routes - no authentication required
+// Protected routes
+router.use(auth);
+
 router.get('/stats', taskManagerController.getTaskStats);
 router.get('/', taskManagerController.getAllTasks);
 router.post('/', taskManagerController.createTask);

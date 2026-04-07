@@ -14,13 +14,13 @@ A full-stack task management application with user authentication and production
 
 ## Live Deployment
 
-**Production URL**: http://13.92.67.123
+**Production URL**: http://4.225.229.91
 
 The application is currently deployed on Azure Kubernetes Service with:
-- Backend API: http://20.75.250.160:5000/api
+- Backend API: internal ClusterIP only (not internet-exposed)
 - Frontend: Served via Azure LoadBalancer
-- Database: MongoDB Atlas
-- Cluster: Standard_DC2as_v5 (1 node)
+- Database: in-cluster MongoDB (ClusterIP)
+- Cluster: Standard_D2as_v4 (1 node)
 
 ## Run Locally with Docker
 
@@ -96,28 +96,35 @@ cp k8s/secret-aks.yaml.example k8s/secret-aks.yaml
 nano k8s/secret-aks.yaml
 ```
 
-Add your MongoDB connection string and JWT secret:
+For the lowest-friction AKS deployment, use in-cluster MongoDB and set:
 ```yaml
 stringData:
-  MONGO_URI: mongodb+srv://username:password@cluster.mongodb.net/database?retryWrites=true&w=majority
+  MONGO_URI: mongodb://task-manager-mongodb:27017/taskmanager
   JWT_SECRET: your-random-secure-string
 ```
+
+If you prefer MongoDB Atlas, keep your Atlas URI and make sure the AKS outbound IP is allowed in Atlas network access.
 
 2. **Run the deployment script:**
 
 ```bash
-./deploy-to-aks.sh RESOURCE_GROUP CLUSTER_NAME ACR_NAME
+./deploy-to-aks.sh RESOURCE_GROUP CLUSTER_NAME ACR_NAME [LOCATION] [VM_SIZE]
 ```
 
 Example:
 ```bash
-./deploy-to-aks.sh rg1 my-cluster1 nodejsacr1771269726
+./deploy-to-aks.sh rg-aks-swedencentral my-cluster-swe1 nodejsacr1771269726 swedencentral Standard_D2as_v4
 ```
+
+If the resource group already exists, the script automatically uses that resource group's location to avoid location mismatch errors.
+If the selected VM size is unavailable in that location/subscription, the script tries supported fallback sizes automatically.
+The script also checks your subscription spending limit status and reports it before provisioning.
 
 The script will:
 - Create Azure Container Registry (ACR)
 - Build and push Docker images
 - Create AKS cluster with available VM types
+- Deploy in-cluster MongoDB if `k8s/mongodb-aks.yaml` exists
 - Deploy backend and frontend
 - Expose services via LoadBalancer
 
@@ -145,9 +152,9 @@ Azure Cloud
 │   ├── Backend Image
 │   └── Frontend Image
 └── AKS Cluster
-    ├── Backend Pod (LoadBalancer Service)
+  ├── Backend Pod (ClusterIP Service)
     ├── Frontend Pod (LoadBalancer Service)
-    └── MongoDB Atlas (External)
+  └── MongoDB Pod (ClusterIP Service)
 ```
 
 ### Troubleshooting
@@ -217,21 +224,29 @@ kubectl rollout restart deployment/task-manager-backend
 ### Frontend Build Configuration
 The frontend Dockerfile uses build arguments to inject the backend API URL at build time:
 ```dockerfile
-ARG REACT_APP_API_URL=http://localhost:5000/api
+ARG REACT_APP_API_URL=/api
 ENV REACT_APP_API_URL=$REACT_APP_API_URL
 ```
 
 This ensures the frontend works correctly on mobile and desktop devices.
 
 ### Kubernetes Services
-- **Backend**: LoadBalancer service for external API access
+- **Backend**: ClusterIP service (internal only)
 - **Frontend**: LoadBalancer service for web access
-- Both services expose public IPs for accessibility from any device
+- Only frontend is public
 
 ### Security
-- Secrets managed via Kubernetes Secret objects
-- MongoDB credentials and JWT secrets never committed to repository
-- CORS configured for production domains
+- JWT secret is mandatory and must be at least 32 characters
+- Backend enforces strict CORS and rate limiting for API/auth routes
+- Backend uses helmet security headers and sanitizes request payloads
+- Backend container runs as non-root with dropped Linux capabilities
+- Frontend nginx adds CSP and other hardening headers
+- Backend and MongoDB are internal ClusterIP services (frontend only is public)
+- Deployment script updates backend allowed frontend origin automatically
+
+### Security Hardening Notes
+- Absolute security does not exist; this project now applies practical layered defenses.
+- For production internet traffic, terminate HTTPS with a trusted TLS certificate (Ingress + cert-manager) instead of plain HTTP.
 
 ## License
 

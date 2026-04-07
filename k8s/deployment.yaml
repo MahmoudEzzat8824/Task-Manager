@@ -15,9 +15,18 @@ spec:
       labels:
         app: task-manager-backend
     spec:
+      automountServiceAccountToken: false
       containers:
       - name: task-manager-backend
         image: mahmoud8824/nodejs-fullstack-backend:latest
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+              - ALL
         resources:
           requests:
             memory: "128Mi"
@@ -35,6 +44,13 @@ spec:
           value: "5000"
         - name: NODE_ENV
           value: "production"
+        - name: FRONTEND_URL
+          value: "http://your-frontend-domain-or-ip"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: task-manager-mongo-secret
+              key: JWT_SECRET
         ports:
         - containerPort: 5000
 ---
@@ -55,6 +71,7 @@ spec:
       labels:
         app: task-manager-frontend
     spec:
+      automountServiceAccountToken: false
       containers:
       - name: task-manager-frontend
         image: mahmoud8824/nodejs-fullstack-frontend:latest
@@ -147,9 +164,15 @@ spec:
         - containerPort: 3000
         env:
           - name: GF_SECURITY_ADMIN_USER
-            value: "admin"
+            valueFrom:
+              secretKeyRef:
+                name: grafana-admin-secret
+                key: username
           - name: GF_SECURITY_ADMIN_PASSWORD
-            value: "admin"
+            valueFrom:
+              secretKeyRef:
+                name: grafana-admin-secret
+                key: password
           - name: GF_USERS_ALLOW_SIGN_UP
             value: "false"
         volumeMounts:

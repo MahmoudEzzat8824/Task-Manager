@@ -1,15 +1,22 @@
-FROM node:18-alpine
+FROM node:22-bookworm-slim AS build
 
 WORKDIR /app
 
-# install production deps only
+# Install production dependencies only.
 COPY package*.json ./
-RUN npm install --omit=dev
+RUN npm ci --omit=dev
 
-# copy source
+# Copy app source.
 COPY . .
 
+FROM gcr.io/distroless/nodejs20-debian12
+
+WORKDIR /app
+
+COPY --from=build --chown=nonroot:nonroot /app /app
+
 ENV NODE_ENV=production
+USER nonroot
 EXPOSE 5000
 
-CMD ["node", "src/server.js"]
+CMD ["src/server.js"]

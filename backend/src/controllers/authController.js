@@ -1,8 +1,12 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRE = '7d';
+
+if (!JWT_SECRET || JWT_SECRET.length < 32) {
+  throw new Error('JWT_SECRET must be set and contain at least 32 characters.');
+}
 
 // Generate JWT token
 const generateToken = (userId) => {
@@ -14,7 +18,23 @@ const generateToken = (userId) => {
 // @access  Public
 exports.signup = async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const username = (req.body.username || '').trim();
+    const email = (req.body.email || '').trim().toLowerCase();
+    const password = req.body.password || '';
+
+    if (!username || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide username, email, and password',
+      });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 8 characters',
+      });
+    }
 
     // Check if user already exists
     const userExists = await User.findOne({ $or: [{ email }, { username }] });
@@ -47,7 +67,7 @@ exports.signup = async (req, res) => {
     console.error('Signup error:', error);
     res.status(500).json({
       success: false,
-      message: error.message || 'Error registering user',
+      message: process.env.NODE_ENV === 'production' ? 'Error registering user' : (error.message || 'Error registering user'),
     });
   }
 };
@@ -57,7 +77,8 @@ exports.signup = async (req, res) => {
 // @access  Public
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const email = (req.body.email || '').trim().toLowerCase();
+    const password = req.body.password || '';
 
     // Validate input
     if (!email || !password) {
@@ -104,7 +125,7 @@ exports.login = async (req, res) => {
     console.error('Login error:', error);
     res.status(500).json({
       success: false,
-      message: 'Error logging in',
+      message: process.env.NODE_ENV === 'production' ? 'Error logging in' : (error.message || 'Error logging in'),
     });
   }
 };
