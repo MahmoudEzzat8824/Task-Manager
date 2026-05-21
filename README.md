@@ -22,6 +22,17 @@ The application is currently deployed on Azure Kubernetes Service with:
 - Database: in-cluster MongoDB (ClusterIP)
 - Cluster: Standard_D2as_v4 (1 node)
 
+## Project Snapshots
+
+### Dashboard
+
+![Dashboard](media/1771421935410.jpeg)
+
+### Login
+
+![Login](media/1771421931598.jpeg)
+
+
 ## Run Locally with Docker
 
 ### Prerequisites
