@@ -30,7 +30,7 @@ The application is currently deployed on Azure Kubernetes Service with:
 
 ### Login
 
-![Login](media/1771421931598.jpeg)
+![Login](media/1771421918093.jpeg)
 
 
 ## Run Locally with Docker
